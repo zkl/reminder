@@ -100,8 +100,8 @@ char * event_em_analise(struct event_em_t * em, char * buf)
 	{
 		if(strstr(buf, monthstr[index]) != 0)
 		{
-			em->mounth[index] = 1;
 			find = 1;
+			em->mounth[index] = 1;
 		}
 	}
 
@@ -115,7 +115,10 @@ char * event_em_analise(struct event_em_t * em, char * buf)
 	for(index = 0;index<7; index++)
 	{
 		if(strstr(buf, weekday[index]) != 0)
+		{
+			find = 1;
 			em->week[index] = 1;
+		}
 	}
 	if(!find)
 	{

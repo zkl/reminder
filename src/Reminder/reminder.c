@@ -23,12 +23,18 @@ void reminder_delete(reminder_t * reminder)
 void reminder_load_config(reminder_t * reminder, const char * file)
 {
 	file_monitor_init(&reminder->cf, file);
+
+	config_free(&reminder->config);
+	config_init(&reminder->config);
 	config_load(&reminder->config, file);
 }
 
 void reminder_load_remind(reminder_t * reminder, const char * file)
 {
 	file_monitor_init(&reminder->ef, file);
+	
+	event_free(&reminder->events);
+	event_init(&reminder->events);
 	event_load(&reminder->events, file);
 }
 
