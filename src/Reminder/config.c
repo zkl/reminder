@@ -37,7 +37,7 @@ int config_anlize(config_t * config, char * buf)
 			sizeof(struct config_key_t) * config->max);
 	}
 
-	str_end = getsubstr(config->keys[config->last].key, 128, buf, ' ');
+	str_end = getsubstr(config->keys[config->last].key, 128, buf, 0, ' ');
 	str_com = buf + (str_end - buf);
 
 	ltrimchr(str_com, ' ');

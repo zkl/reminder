@@ -40,13 +40,16 @@ void reminder_load_remind(reminder_t * reminder, const char * file)
 
 void reminder_exec(reminder_t * reminder)
 {
-	SYSTEMTIME tm;
+	SYSTEMTIME ntm;
+	SYSTEMTIME otm;
 	event_list_t * el;
 	const char * cmd;
+	
+	GetLocalTime(&otm);
 	while(1)
 	{
-		GetLocalTime(&tm);
-		el = event_check(&reminder->events, &tm);
+		GetLocalTime(&ntm);
+		el = event_check(&reminder->events, &ntm, &otm);
 		
 		do
 		{
@@ -64,5 +67,6 @@ void reminder_exec(reminder_t * reminder)
 			reminder_load_config(reminder, reminder->cf.file);
 
 		Sleep(1000);
+		otm = ntm;
 	}
 }

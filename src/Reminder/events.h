@@ -19,7 +19,7 @@ void event_init(event_t * event);
 void event_free(event_t * event);
 int  event_load(event_t * event, const char * file);
 
-event_list_t * event_check(event_t * event, SYSTEMTIME * time);
+event_list_t * event_check(event_t * event, SYSTEMTIME * ntime, SYSTEMTIME * otime);
 const char *   event_list_next(event_list_t * el);
 
 #endif

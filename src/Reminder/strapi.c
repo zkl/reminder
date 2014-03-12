@@ -50,6 +50,35 @@ char * ltrimchr( char *str, char cflag )
 	return str;
 }
 
+int nums(const char * str)
+{
+	return strskpst(str, "0123456789") - str;
+}
+
+const char * strskpst(const char * str, const char * chars )
+{
+	while(*str)
+	{
+		if(strchr(chars, *str) == 0)
+			break;
+
+		str++;
+	}
+	return str;
+}
+
+const char * strstpst(const char * str, const char * chars )
+{
+	while(*str)
+	{
+		if(strchr(chars, *str) != 0)
+			break;
+
+		str++;
+	}
+	return str;
+}
+
 
 /***************************************************************
 * 函数名称 : getsubstr
@@ -63,21 +92,31 @@ char * ltrimchr( char *str, char cflag )
 * 返回值   : 结束为止
 * 修改历史 : 
 ***************************************************************/
-const char * getsubstr( char * sdest, int nsize, const char * ssrc, char cflag)
+const char * getsubstr( char * sdest, int nsize, const char * ssrc, int ncnt, char cflag)
 {
-	const char *ps = ssrc;
-	const char * pos = strchr(ssrc, cflag);
-	if(pos == 0)
+	char buf[2];
+
+	const char *es = 0;
+	const char *ps = 0;
+
+	sprintf(buf, "%c", cflag);
+
+	ps = strskpst(ssrc, buf);
+	for(ncnt; ncnt > 0; ncnt--)
+	{
+		ps = strstpst(ps, buf);
+		ps = strskpst(ps, buf);
+	}
+
+	es = strstpst(ps, buf);
+
+	if(es - ps > nsize)
 		return 0;
 
-	*sdest = 0;
-	if(pos - ssrc >= nsize)
-		return 0;
+	if(es != ps)
+		strncpy(sdest, ps, es-ps);
 
-	while(ps != pos)
-	   *sdest++ = *ps++;
+	sdest[es-ps] = 0;
 
-	*sdest = 0;
-	return pos+1;
+	return es;
 }
-

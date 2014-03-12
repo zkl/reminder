@@ -17,29 +17,29 @@ struct event_em_t
 	char cmd[1024];
 };
 
-char * event_em_analise(struct event_em_t * em, char * buf);
-int event_em_compare(struct event_em_t * em, SYSTEMTIME * time);
-int event_analise(event_t * event, char * buf);
+const char * event_em_analise(struct event_em_t * em, const char * buf);
+int  event_em_compare(struct event_em_t * em, SYSTEMTIME * ntime, SYSTEMTIME * otime);
+long event_em_cmptime(SYSTEMTIME * ntime, SYSTEMTIME * otime);
+int  event_analise(event_t * event, char * buf);
 
 int event_analise(event_t * event, char * buf)
 {
 	struct event_em_t * em;
-	
-	ltrimchr(buf, ' ');
-	if(strlen(buf) == 0 || buf[0] == '#')
+	const char * ps = strskpst(buf, "\t \r\n");
+	if(strlen(ps) == 0 || ps[0] == '#')
 		return 0;
 
 	em = (struct event_em_t *)malloc(sizeof(struct event_em_t));
-	buf = event_em_analise(em, buf);
+	ps = event_em_analise(em, ps);
 	
-	if(buf != 0)
+	if(ps != 0)
 	{
 		linked_list_insert(event->all_event, 0, em);
 		
 		if(strlen(buf) >= 1024) //  命令长度太长 
 			return -1;
 		else
-			strcpy(em->cmd, buf);
+			strcpy(em->cmd, ps);
 	}
 	else
 	{
@@ -50,23 +50,17 @@ int event_analise(event_t * event, char * buf)
 	return 0;
 }
 
-char * event_em_analise(struct event_em_t * em, char * buf)
+const char * event_em_analise(struct event_em_t * em, const char * buf)
 {
 	int ret = 0;
-
 	int year, month, day, hour, minute, index, find;
 	const char * weekday[] = {"Sun", "Mon", "Tues", "Wed", "Thu", "Fir", "Sat"};
 	const char * monthstr[]= {"Jan", "Feb", "Mar", "Apl", "May", "Jnu", "Jul",
 		"Aug", "Sep", "Oct", "Nov", "Dec"};
+	
+	char words[100];
 
-	char * est;
-	est = strstr(buf, "RUN");
-	if(est == 0)
-		return 0;
-
-	*est = 0;
-	ltrimchr(est+3, ' ');
-
+	/* 初始化 */
 	em->hour = -1;
 	em->day  = -1;
 	em->year = -1;
@@ -79,29 +73,90 @@ char * event_em_analise(struct event_em_t * em, char * buf)
 	for(index=0; index < 7; index++)
 		em->week[index] = 0;
 	
-
-	ret = sscanf(buf, "%d:%d", &hour, &minute);
-	if(ret == 2)
+	for(index=0; 1; index++)
 	{
-		em->hour = hour;
-		em->minute = minute;
-	}
+		buf = getsubstr(words, 100, buf, 0, ' ');
+		if(buf == 0 || strlen(buf) == 0)
+			return 0;
 
-	ret = sscanf(buf, "%d-%d-%d", &year, &month, &day);
-	if(ret == 3 && month < 13 && day < 32)
-	{
-		em->year = year;
-		em->mounth[month-1] = 1;
-		em->day = day;
+		if(stricmp(words, "RUN") == 0)
+			break;
+
+		ret = sscanf(words, "%d:%d", &hour, &minute);
+		if(ret == 2)
+		{
+			em->hour = hour;
+			em->minute = minute;
+			continue;
+		}
+
+		ret = sscanf(words, "%d-%d-%d", &year, &month, &day);
+		if(ret == 3 && month < 13 && day < 32)
+		{
+			em->year = year;
+			em->mounth[month-1] = 1;
+			em->day = day;
+			continue;
+		}
+
+		ret = sscanf(words, "%d", &day);
+		if(ret == 1 && strlen(words) <=2 && nums(words) == strlen(words))
+		{
+			if(em->day != -1)
+			{
+				printf("重复设置日期，使用最后一次设置(%d)为准\n", day);
+			}
+			em->day = day;
+			continue;
+		}
+
+		ret = sscanf(words, "%d", &year);
+		if(ret == 1 && strlen(words) <= 4 && nums(words) == strlen(words))
+		{
+			if(em->year != -1)
+				printf("重复设置年份，使用最后一次设置(%d)为准\n", year);
+			
+			em->year = year;
+			continue;
+		}
+
+		find = 0;
+		for(index = 0;index<12; index++)
+		{
+			if(stricmp(words, monthstr[index]) == 0)
+			{
+				find = 1;
+				em->mounth[index] = 1;
+			}
+		}
+
+		if(find)
+			continue;
+
+		find = 0;
+		for(index = 0;index<7; index++)
+		{
+			if(stricmp(words, weekday[index]) == 0)
+			{
+				find = 1;
+				em->week[index] = 1;
+			}
+		}
+
+		if(find)
+			continue;
+
+		/* 未知的时间格式 */
+		return 0;
 	}
 
 	find = 0;
 	for(index = 0;index<12; index++)
 	{
-		if(strstr(buf, monthstr[index]) != 0)
+		if(em->mounth[index] == 1)
 		{
 			find = 1;
-			em->mounth[index] = 1;
+			break;
 		}
 	}
 
@@ -114,45 +169,90 @@ char * event_em_analise(struct event_em_t * em, char * buf)
 	find = 0;
 	for(index = 0;index<7; index++)
 	{
-		if(strstr(buf, weekday[index]) != 0)
+		if(em->week[index] == 1)
 		{
 			find = 1;
-			em->week[index] = 1;
+			break;
 		}
 	}
+
 	if(!find)
 	{
 		for(index=0; index < 7; index++)
 			em->week[index] = 1;
 	}
 
-	return est + 3;
+	return buf;
 }
 
-int event_em_compare(struct event_em_t * em, SYSTEMTIME * time)
+int event_em_compare(struct event_em_t * em, SYSTEMTIME * ntime, SYSTEMTIME * otime)
 {
-	if(em->year >= 0 && em->year != time->wYear)
+	int index, find;
+	SYSTEMTIME tm;
+
+	/* 比较月份是否存在 */
+	find = -1;
+	index = otime->wMonth-1;
+	while(1)
+	{
+		if(em->mounth[index] == 1) // 找到最大的匹配月份
+			find = index;
+
+		if(index == ntime->wMonth-1)
+			break;
+
+		index = (index+1)%12;
+	};
+
+	if(find == -1)
 		return 0;
 
-	if(em->mounth[time->wMonth-1] != 1)
+	tm.wMonth = find+1;
+
+	/* 比较星期是否存在 */
+	find = -1;
+	index = otime->wDayOfWeek;
+	while(1)
+	{
+		if(em->week[index] == 1)
+			find = index;
+
+		if(index == ntime->wDayOfWeek)
+			break;
+
+		index = (index+1)%7;
+	};
+
+	if(find == -1)
 		return 0;
 
-	if(em->week[time->wDayOfWeek] != 1)
-		return 0;
+	tm.wDayOfWeek = find;
+	tm.wMilliseconds = 0;
+	
+	tm.wYear = em->year > -1 ? em->year : ntime->wYear;
+	tm.wDay  = em->day  > -1 ? em->day  : ntime->wDay;
+	tm.wHour = em->hour > -1 ? em->hour : ntime->wHour;
+	tm.wMinute = em->minute > -1 ? em->minute : ntime->wMinute;
+	tm.wSecond = em->second > -1 ? em->second : ntime->wSecond;
 
-	if(em->day >= 0 && em->day != time->wDay)
+	if(event_em_cmptime(ntime, &tm) >= 0 && event_em_cmptime(otime, &tm) < 0)
+		return 1;
+	else
 		return 0;
+}
 
-	if(em->hour >= 0 && em->hour != time->wHour)
-		return 0;
-
-	if(em->minute >= 0 && em->minute != time->wMinute)
-		return 0;
-
-	if(em->second >= 0 && em->second != time->wSecond)
-		return 0;
-
-	return 1;
+// 如果大于0说明ntime > otime 等于0 ntime == otime 小于0 ntime < otime
+long event_em_cmptime(SYSTEMTIME * ntime, SYSTEMTIME * otime)
+{
+	long diff = 0;
+	diff = ntime->wYear-otime->wYear;
+	diff += ntime->wMonth+diff*12-otime->wMonth;
+	diff += ntime->wDay+diff*31-otime->wDay; 
+	diff += ntime->wHour+diff*24-otime->wHour;
+	diff += ntime->wHour+diff*24-otime->wHour;
+	diff += ntime->wMinute+diff*60-otime->wMinute;
+	diff += ntime->wSecond+diff*60-otime->wSecond;
+	return diff;
 }
 
 void event_init(event_t * event)
@@ -177,7 +277,7 @@ void event_free(event_t * event)
 
 int event_load(event_t * event, const char * file)
 {
-	FILE * fp = fopen(file, "r");
+	FILE * fp = fopen(file, "rb");
 	char mbuf[2048];
 	int  line_num = 0;
 
@@ -189,9 +289,6 @@ int event_load(event_t * event, const char * file)
 	{
 		line_num++;
 		file_readline(fp, mbuf, 2048);
-		if(strlen(mbuf) == 0)
-			continue;
-
 		if(event_analise(event, mbuf) != 0)
 			printf("配置错误 第 %3d 行 %s\n", line_num, mbuf);
 	}
@@ -199,7 +296,7 @@ int event_load(event_t * event, const char * file)
 	return 0;
 }
 
-event_list_t * event_check(event_t * event, SYSTEMTIME * time)
+event_list_t * event_check(event_t * event, SYSTEMTIME * ntime, SYSTEMTIME * otime)
 {
 	linked_list_node_t * node = linked_list_first(event->all_event);
 
@@ -210,7 +307,7 @@ event_list_t * event_check(event_t * event, SYSTEMTIME * time)
 	{
 		struct event_em_t * em = (struct event_em_t *)linked_list_data(node);
 		
-		if(event_em_compare(em, time))
+		if(event_em_compare(em, ntime, otime))
 			linked_list_insert(event->el.list, 0, em);
 	}
 
