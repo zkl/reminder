@@ -13,7 +13,7 @@ typedef struct reminder_t
 	struct file_monitor_t ef;
 }reminder_t;
 
-void reminder_create(reminder_t * reminder);
+reminder_t * reminder_create();
 void reminder_delete(reminder_t * reminder);
 void reminder_load_config(reminder_t * reminder, const char * file);
 void reminder_load_remind(reminder_t * reminder, const char * file);

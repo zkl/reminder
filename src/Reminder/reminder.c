@@ -8,16 +8,19 @@ void reminder_runcmd(const char * cmd)
 	system(buf);
 }
 
-void reminder_create(reminder_t * reminder)
+reminder_t * reminder_create()
 {
+	reminder_t * reminder = (reminder_t *)malloc(sizeof(reminder_t));
 	config_init(&reminder->config);
 	event_init(&reminder->events);
+	return reminder;
 }
 
 void reminder_delete(reminder_t * reminder)
 {
 	config_free(&reminder->config);
 	event_free(&reminder->events);
+	free(reminder);
 }
 
 void reminder_load_config(reminder_t * reminder, const char * file)

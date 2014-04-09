@@ -11,15 +11,16 @@ const char * info = {
 
 int main(int argc, char * argv[])
 {
-	reminder_t reminder;
+	reminder_t * reminder;
 
 	printf("%s\n", info);
 
-	reminder_create(&reminder);
-	reminder_load_config(&reminder, "config.ini");
-	reminder_load_remind(&reminder, "events.ini");
+	reminder = reminder_create();
+	reminder_load_config(reminder, "config.ini");
+	reminder_load_remind(reminder, "events.ini");
 	
-	reminder_exec(&reminder);
-	
+	reminder_exec(reminder);
+	reminder_delete(reminder);
+
 	return 0;
 }
